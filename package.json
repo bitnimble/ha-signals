@@ -1,0 +1,21 @@
+{
+  "name": "ha-signals",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:bitnimble/ha-signals.git",
+  "author": "D <me@kumo.dev>",
+  "license": "MIT",
+  "dependencies": {
+    "@types/node": "^22.10.7",
+    "bufferutil": "^4.0.9",
+    "dotenv": "^16.4.7",
+    "mobx": "^6.13.5",
+    "prettier": "^3.4.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "ws": "^8.18.0"
+  },
+  "scripts": {
+    "schema": "tsx tools/build_schema.ts && yarn prettier --write src/types/schema.d.ts"
+  }
+}
