@@ -1,17 +1,20 @@
-import { Signal } from 'signal';
+import { HassWebsocket } from 'api/websocket';
+import { createButtonLight } from 'automations/motion_light';
 import { EntityStore } from 'store';
 
+global.WebSocket = require('ws');
+
 async function main() {
+  // Setup
   const store = new EntityStore();
-  await store.reloadStates();
+  store.reloadStates();
+  const hassWs = new HassWebsocket(store);
+  await hassWs.connect();
 
-  Signal.effect(() => {
-    console.log(store.getState('light.balcony_hektar_lamp')?.state);
-  });
+  // Test automation
+  createButtonLight(hassWs, 'dimmer_bedroom_lamp', 'action.on', 'light.balcony_hektar_lamp');
 
-  setInterval(() => {
-    store.reloadStates();
-  }, 5000);
+  console.log('Running!');
 }
 
 main();

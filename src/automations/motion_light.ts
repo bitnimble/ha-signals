@@ -1,9 +1,14 @@
 import { callService } from 'api/rest';
-import { Signal } from 'signal';
-import { Entity } from 'types/entity';
+import { HassWebsocket } from 'api/websocket';
+import { DeviceName, DeviceTriggers, Entities } from 'types/schema';
 
-export function createMotionLight(sensor: Entity<'binary_sensor'>, light: Entity<'light'>) {
-  Signal.effect(() => {
-    callService('light', 'toggle', light.id, { brightness: sensor.state === 'on' ? 255 : 0 });
+export function createButtonLight<D extends DeviceName>(
+  hassWs: HassWebsocket,
+  triggerDevice: D,
+  trigger: DeviceTriggers<D>,
+  light: Entities['light']
+) {
+  hassWs.createTrigger(triggerDevice, trigger, () => {
+    callService('light', 'toggle', light);
   });
 }

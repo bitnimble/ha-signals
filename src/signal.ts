@@ -16,7 +16,7 @@ export namespace Signal {
       return this.t;
     }
     set(t: T) {
-      mobx.runInAction(() => this.t = t);
+      mobx.runInAction(() => (this.t = t));
     }
   }
 
@@ -38,5 +38,9 @@ export namespace Signal {
 
   export function effect(fn: () => void): () => void {
     return mobx.autorun(fn);
+  }
+
+  export function transaction<F extends Function>(fn: F): F {
+    return mobx.action(fn);
   }
 }

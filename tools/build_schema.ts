@@ -1,13 +1,16 @@
-import { getServices } from 'api/rest';
+import { HassWebsocket } from 'api/websocket';
 import 'dotenv/config';
 import fs from 'fs';
 import { globals } from 'globals';
 import path from 'path';
+import { EntityStore } from 'store';
 
-function camelcase(s: string) {
-  return s[0].toUpperCase() + s.substring(1);
-}
+global.WebSocket = require('ws');
 
+const authHeaders = {
+  'Authorization': `Bearer ${globals.authToken}`,
+  'Content-Type': 'application/json',
+};
 class StringBuilder {
   private segments: string[] = [];
 
@@ -32,8 +35,9 @@ async function main() {
   const output = new StringBuilder();
   const domainIds = await processServices(output);
   await processEntities(output, domainIds);
+  await processDevices(output);
 
-  const outputPath = path.join(__dirname, '..', 'src/types/schema.d.ts');
+  const outputPath = path.join(__dirname, '..', 'src/types/schema.ts');
   fs.writeFileSync(outputPath, output.build());
 }
 
@@ -44,7 +48,9 @@ async function processServices(output: StringBuilder) {
   const domainIds: string[] = [];
 
   // TODO: TS types for this
-  const hassServices = (await getServices()) as any[];
+  const hassServices = (await fetch(globals.hassUrl + '/api/services', {
+    headers: authHeaders,
+  }).then((r) => r.json())) as any[];
 
   // TODO: build ast instead of strings
   for (const domain of hassServices) {
@@ -184,12 +190,8 @@ ${validTsDocParts.map(([k, v]) => ` * @${k} ${v}`).join('\n')}
 }
 
 async function processEntities(output: StringBuilder, domainIds: string[]) {
-  const headers = {
-    'Authorization': `Bearer ${globals.authToken}`,
-    'Content-Type': 'application/json',
-  };
   const entities = (await fetch(globals.hassUrl + '/api/states', {
-    headers,
+    headers: authHeaders,
   }).then((r) => r.json())) as {
     attributes: any;
     entity_id: string;
@@ -221,6 +223,67 @@ export type Entities = {
 
 export type EntityId = Entities[keyof Entities];
 `);
+}
+
+async function processDevices(output: StringBuilder) {
+  const resp = (await fetch(globals.hassUrl + '/api/template', {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({
+      template: `
+{% set devices = states | map(attribute='entity_id') | map('device_id') | unique | reject('eq', None) | list %}
+{%- set ns = namespace(devices = []) %}
+{%- for device in devices %}
+  {%- set name = device_attr(device, 'name') %}
+  {%- if name %}
+    {%- set ns.devices = ns.devices + [ { "id": device, "name": name } ] %}
+  {%- endif %}
+{%- endfor %}
+{{ ns.devices | tojson }}
+`,
+    }),
+  }).then((r) => r.json())) as { id: string; name: string }[];
+
+  const hassWs = new HassWebsocket(new EntityStore());
+  await hassWs.connect();
+
+  output.add(`export const Devices = {\n`);
+  for (const device of resp) {
+    const triggers = (await hassWs.getDeviceTriggers(device.id)) as {
+      domain: string;
+      type: string;
+      subtype: string;
+    }[];
+    const mqttTriggers = triggers.filter((t) => t.domain === 'mqtt'); // Filter only mqtt triggers right now, we'll look at others later if we need them
+    if (mqttTriggers.length === 0) {
+      continue;
+    }
+    output.add(`
+  ['${device.id}']: {
+    name: '${device.name.replace("'", "\\'")}',
+    triggers: [
+      ${mqttTriggers.map((t) => `{ id: '${t.type}.${t.subtype}' },`).join('\n')}
+    ]
+  },`);
+  }
+  output.add(`
+} as const;
+export type DeviceName = typeof Devices[keyof typeof Devices]['name'];
+export type DeviceTriggers<D extends DeviceName> = Extract<typeof Devices[keyof typeof Devices], { name: D }>['triggers'][number]['id'];
+export const deviceNameMap = new Map([...Object.entries(Devices)].map(e => [e[1].name, e[0]]));
+type UnionToIntersection<U> = (U extends any ? (x: U) => void : never) extends (x: infer I) => void
+  ? I
+  : never;
+export type DomainForEntity = UnionToIntersection<
+  {
+    [Domain in keyof Entities]: {
+      [EntityId in Entities[Domain]]: Domain;
+    };
+  }[keyof Entities]
+>;
+`);
+
+  hassWs.close();
 }
 
 main();
