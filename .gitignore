@@ -1,5 +1,6 @@
 .env
 src/types/schema.ts
+automations
 
 # Logs
 logs
