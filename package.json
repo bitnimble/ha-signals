@@ -6,13 +6,16 @@
   "author": "D <me@kumo.dev>",
   "license": "MIT",
   "dependencies": {
+    "@date-fns/tz": "^1.2.0",
     "@types/node": "^22.10.7",
     "@types/ws": "^8.5.13",
     "bufferutil": "^4.0.9",
+    "date-fns": "^4.1.0",
     "dotenv": "^16.4.7",
     "home-assistant-js-websocket": "^9.4.0",
     "mobx": "^6.13.5",
     "prettier": "^3.4.2",
+    "ts-pattern": "^5.6.1",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
     "ws": "^8.18.0"

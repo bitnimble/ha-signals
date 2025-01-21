@@ -19,6 +19,10 @@ export class HassWebsocket {
     this.connection = await createConnection({ auth });
   }
 
+  get isConnected() {
+    return this.connection && this.connection.connected;
+  }
+
   subscribeToStateChanges() {
     if (!this.connection) {
       throw new Error('Websocket connection was not alive');

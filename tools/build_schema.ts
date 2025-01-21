@@ -7,6 +7,15 @@ import { EntityStore } from 'store';
 
 global.WebSocket = require('ws');
 
+const camelcase = (s: string, uppercase: boolean = false) => {
+  const parts = s.split('_');
+  const start = uppercase ? 0 : 1;
+  for (let i = start; i < parts.length; i++) {
+    parts[i] = parts[i][0].toUpperCase() + parts[i].substring(1);
+  }
+  return parts.join('');
+};
+
 const authHeaders = {
   'Authorization': `Bearer ${globals.authToken}`,
   'Content-Type': 'application/json',
@@ -33,6 +42,7 @@ async function main() {
   }
 
   const output = new StringBuilder();
+  output.add("import { callService } from 'api/rest';\n");
   const domainIds = await processServices(output);
   await processEntities(output, domainIds);
   await processDevices(output);
@@ -52,9 +62,13 @@ async function processServices(output: StringBuilder) {
     headers: authHeaders,
   }).then((r) => r.json())) as any[];
 
+  const serviceHelpers = new StringBuilder();
+
   // TODO: build ast instead of strings
   for (const domain of hassServices) {
     const domainId: string = domain.domain;
+    serviceHelpers.add(`export const ${camelcase(domainId, true)} = {`);
+
     const parsedServices: string[] = [];
     for (const [serviceId, _serviceDescriptor] of Object.entries(domain.services)) {
       const serviceDescriptor = _serviceDescriptor as any;
@@ -63,8 +77,8 @@ async function processServices(output: StringBuilder) {
       let targetStr;
       if (target?.entity) {
         if (!Array.isArray(target.entity)) {
-          // FIXME: DO NOT COMMIT
-          console.log('Found non-array entity target for ' + serviceId);
+          // Assume target.entity is an array (I haven't found non-array entity targets yet)
+          console.warn('Found non-array entity target for ' + serviceId);
           continue;
         }
         targetStr = target.entity
@@ -74,7 +88,10 @@ async function processServices(output: StringBuilder) {
         // TODO: support "device" targets
         targetStr = 'string';
       } else {
-        targetStr = 'never';
+        targetStr = 'null';
+      }
+      if (targetStr !== 'null') {
+        targetStr = `${targetStr} | ${targetStr}[]`;
       }
       const serviceTsDocParts = {
         ['title']: serviceDescriptor.name,
@@ -89,6 +106,16 @@ async function processServices(output: StringBuilder) {
   },
 }`
       );
+
+      if (targetStr === 'null') {
+        serviceHelpers.add(`
+${camelcase(serviceId)}: (data?: Extract<Domain<'${domainId}'>['services'][number], { id: '${serviceId}' }>['data']) => callService('${domainId}', '${serviceId}', null, data),
+`);
+      } else {
+        serviceHelpers.add(`
+${camelcase(serviceId)}: (target: ${targetStr}, data?: Extract<Domain<'${domainId}'>['services'][number], { id: '${serviceId}' }>['data']) => callService('${domainId}', '${serviceId}', target, data),
+`);
+      }
     }
 
     domainIds.push(domainId);
@@ -98,6 +125,8 @@ async function processServices(output: StringBuilder) {
     ${parsedServices.join(',\n')}
   ],
 }`);
+
+    serviceHelpers.add(`};\n`);
   }
   output.add(domains.join(',\n'));
   output.add('\n];\n');
@@ -107,6 +136,9 @@ export type ServiceId = Domains[number]['services'][number]['id'];
 export type Domain<D extends DomainId> = Extract<Domains[number], { id: D }>;
 export type Service<D extends DomainId, S extends ServiceId> = Extract<Domain<D>['services'][number], { id: S }>;
 `);
+
+  // Create service call helpers / sugar
+  output.add(serviceHelpers.build());
 
   return domainIds;
 }

@@ -1,5 +1,6 @@
 import { HassEntity } from 'home-assistant-js-websocket';
 import { Signal } from 'signal';
+import { match } from 'ts-pattern';
 import { DomainId, Entities, EntityId } from 'types/schema';
 
 export type OnOff = 'on' | 'off';
@@ -24,10 +25,13 @@ export type RawEntity<
 };
 
 export function convertHassEntity(hassEntity: HassEntity): RawEntity<DomainId> {
+  const domain = hassEntity.entity_id.substring(0, hassEntity.entity_id.indexOf('.')) as DomainId;
   return {
     id: hassEntity.entity_id as EntityId,
-    domain: hassEntity.entity_id.substring(0, hassEntity.entity_id.indexOf('.')) as DomainId,
-    state: hassEntity.state, // TODO: parsing for numbers, booleans, etc
+    domain,
+    state: match(domain)
+      .with('sensor', () => (hassEntity.state != null ? Number(hassEntity.state) : undefined))
+      .otherwise(() => hassEntity.state),
     lastChanged: new Date(hassEntity.last_updated), // last_updated = state or attribute change, last_changed = state change only
     attributes: hassEntity.attributes,
   };
