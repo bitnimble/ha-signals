@@ -1,9 +1,9 @@
-import { HassWebsocket } from 'api/websocket';
 import 'dotenv/config';
 import fs from 'fs';
-import { globals } from 'globals';
 import path from 'path';
-import { EntityStore } from 'store';
+import { HassWebsocket } from '../src/api/websocket';
+import { globals } from '../src/globals';
+import { EntityStore } from '../src/store';
 
 global.WebSocket = require('ws');
 

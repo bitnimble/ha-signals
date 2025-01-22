@@ -8,6 +8,7 @@ export type OnOff = 'on' | 'off';
 type EntityStates = {
   ['light']: OnOff;
   ['binary_sensor']: OnOff;
+  ['input_boolean']: boolean;
   ['sensor']: number;
 };
 export type EntityState<D extends DomainId> = D extends keyof EntityStates ? EntityStates[D] : any;
@@ -31,6 +32,7 @@ export function convertHassEntity(hassEntity: HassEntity): RawEntity<DomainId> {
     domain,
     state: match(domain)
       .with('sensor', () => (hassEntity.state != null ? Number(hassEntity.state) : undefined))
+      .with('input_boolean', () => (hassEntity.state === 'on' ? true : false))
       .otherwise(() => hassEntity.state),
     lastChanged: new Date(hassEntity.last_updated), // last_updated = state or attribute change, last_changed = state change only
     attributes: hassEntity.attributes,
