@@ -1,7 +1,9 @@
 {
   "name": "ha-signals",
   "version": "1.0.0",
-  "main": "index.js",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "repository": "git@github.com:bitnimble/ha-signals.git",
   "author": "D <me@kumo.dev>",
   "license": "MIT",

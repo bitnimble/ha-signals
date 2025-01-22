@@ -42,7 +42,7 @@ async function main() {
   }
 
   const output = new StringBuilder();
-  output.add("import { callService } from 'api/rest';\n");
+  output.add("import { callService } from '../api/rest';\n");
   const domainIds = await processServices(output);
   await processEntities(output, domainIds);
   await processDevices(output);

@@ -1,6 +1,6 @@
-import { getStates } from 'api/rest';
-import { Entity, RawEntity } from 'types/entity';
-import { DomainForEntity, DomainId, Entities, EntityId } from 'types/schema';
+import { getStates } from './api/rest';
+import { Entity, RawEntity } from './types/entity';
+import { DomainForEntity, DomainId, Entities, EntityId } from './types/schema';
 
 export class EntityStore {
   private statesById = new Map<EntityId, Entity<DomainId>>();
