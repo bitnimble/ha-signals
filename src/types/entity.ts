@@ -21,7 +21,6 @@ export type RawEntity<
   id: Id;
   domain: D;
   state?: EntityState<D>;
-  numericState?: number;
   lastChanged: Date;
   attributes: A;
 };
@@ -34,12 +33,10 @@ export function convertHassEntity(hassEntity: HassEntity): RawEntity<DomainId> {
       : match(domain)
           .with('input_boolean', () => (hassEntity.state === 'on' ? true : false))
           .otherwise(() => hassEntity.state);
-  const numericState = Number(state);
   return {
     id: hassEntity.entity_id as EntityId,
     domain,
     state,
-    numericState: isNaN(numericState) ? undefined : numericState,
     lastChanged: new Date(hassEntity.last_updated), // last_updated = state or attribute change, last_changed = state change only
     attributes: hassEntity.attributes,
   };
@@ -73,6 +70,11 @@ export class Entity<D extends DomainId, Id extends Entities[D] = Entities[D], A 
 
   get state() {
     return this.computedState.get();
+  }
+
+  get numericState() {
+    const numericState = Number(this.state);
+    return isNaN(numericState) ? undefined : numericState;
   }
 
   get attributes() {
