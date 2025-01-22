@@ -1,9 +1,8 @@
 import 'dotenv/config';
 import fs from 'fs';
+import { createConnection, createLongLivedTokenAuth } from 'home-assistant-js-websocket';
 import path from 'path';
-import { HassWebsocket } from '../src/api/websocket';
 import { globals } from '../src/globals';
-import { EntityStore } from '../src/store';
 
 global.WebSocket = require('ws');
 
@@ -276,12 +275,15 @@ async function processDevices(output: StringBuilder) {
     }),
   }).then((r) => r.json())) as { id: string; name: string }[];
 
-  const hassWs = new HassWebsocket(new EntityStore());
-  await hassWs.connect();
+  const auth = createLongLivedTokenAuth(globals.hassUrl, globals.authToken);
+  const connection = await createConnection({ auth });
 
   output.add(`export const Devices = {\n`);
   for (const device of resp) {
-    const triggers = (await hassWs.getDeviceTriggers(device.id)) as {
+    const triggers = (await connection.sendMessagePromise({
+      type: 'device_automation/trigger/list',
+      device_id: device.id,
+    })) as {
       domain: string;
       type: string;
       subtype: string;
@@ -315,7 +317,7 @@ export type DomainForEntity = UnionToIntersection<
 >;
 `);
 
-  hassWs.close();
+  connection.close();
 }
 
 main();

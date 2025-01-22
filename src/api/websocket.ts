@@ -38,16 +38,6 @@ export class HassWebsocket {
     }, 'state_changed');
   }
 
-  getDeviceTriggers(id: string) {
-    if (!this.connection) {
-      throw new Error('Websocket connection was not alive');
-    }
-    return this.connection.sendMessagePromise({
-      type: 'device_automation/trigger/list',
-      device_id: id,
-    });
-  }
-
   createTrigger<D extends DeviceName, F extends () => void | Promise<void>>(
     device: D,
     trigger: DeviceTriggers<D>,
