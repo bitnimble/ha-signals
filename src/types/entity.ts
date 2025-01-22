@@ -9,7 +9,7 @@ type EntityStates = {
   ['light']: OnOff;
   ['binary_sensor']: OnOff;
   ['input_boolean']: boolean;
-  ['sensor']: number;
+  ['sensor']: string;
 };
 export type EntityState<D extends DomainId> = D extends keyof EntityStates ? EntityStates[D] : any;
 
@@ -21,19 +21,25 @@ export type RawEntity<
   id: Id;
   domain: D;
   state?: EntityState<D>;
+  numericState?: number;
   lastChanged: Date;
   attributes: A;
 };
 
 export function convertHassEntity(hassEntity: HassEntity): RawEntity<DomainId> {
   const domain = hassEntity.entity_id.substring(0, hassEntity.entity_id.indexOf('.')) as DomainId;
+  const state =
+    hassEntity.state === 'unavailable' || hassEntity.state === 'unknown'
+      ? undefined
+      : match(domain)
+          .with('input_boolean', () => (hassEntity.state === 'on' ? true : false))
+          .otherwise(() => hassEntity.state);
+  const numericState = Number(state);
   return {
     id: hassEntity.entity_id as EntityId,
     domain,
-    state: match(domain)
-      .with('sensor', () => (hassEntity.state != null ? Number(hassEntity.state) : undefined))
-      .with('input_boolean', () => (hassEntity.state === 'on' ? true : false))
-      .otherwise(() => hassEntity.state),
+    state,
+    numericState: isNaN(numericState) ? undefined : numericState,
     lastChanged: new Date(hassEntity.last_updated), // last_updated = state or attribute change, last_changed = state change only
     attributes: hassEntity.attributes,
   };
