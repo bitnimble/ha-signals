@@ -11,7 +11,9 @@ type EntityStates = {
   ['input_boolean']: boolean;
   ['sensor']: string;
 };
-export type EntityState<D extends DomainId> = D extends keyof EntityStates ? EntityStates[D] : any;
+export type EntityState<D extends DomainId> = D extends keyof EntityStates
+  ? EntityStates[D]
+  : string;
 
 export type RawEntity<
   D extends DomainId,

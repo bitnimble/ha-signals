@@ -17,6 +17,7 @@ export class HassWebsocket {
   async connect() {
     const auth = createLongLivedTokenAuth(globals.hassUrl, globals.authToken);
     this.connection = await createConnection({ auth });
+    this.subscribeToStateChanges();
   }
 
   get isConnected() {
@@ -29,7 +30,6 @@ export class HassWebsocket {
     }
     this.connection.subscribeEvents<StateChangedEvent>((e) => {
       const entityId = e.data.entity_id as EntityId;
-      console.log(entityId);
       if (!e.data.new_state) {
         this.store.deleteState(entityId);
         return;

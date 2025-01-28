@@ -25,8 +25,8 @@ export async function callService<
     headers,
     method: 'POST',
     body: JSON.stringify({
-      ...data,
       ['entity_id']: target,
+      ...data,
     }),
   }).then((r) => r.json());
 }
