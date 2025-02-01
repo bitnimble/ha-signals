@@ -1,6 +1,6 @@
 import { TZDate } from '@date-fns/tz';
 import { format } from 'date-fns';
-import { Signal } from 'signal';
+import { Signal } from '@/signal';
 
 const timeStore = new Signal.State({
   currentTime: new TZDate(new Date(), 'Australia/Sydney'),

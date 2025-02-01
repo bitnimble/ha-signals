@@ -1,6 +1,6 @@
-import { HassWebsocket } from './api/websocket';
-import { Signal } from './signal';
-import { EntityStore } from './store';
+import { HassWebsocket } from '@/api/websocket';
+import { Signal } from '@/signal';
+import { EntityStore } from '@/store';
 
 global.WebSocket = require('ws');
 

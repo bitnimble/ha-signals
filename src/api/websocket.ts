@@ -4,10 +4,10 @@ import {
   createLongLivedTokenAuth,
   StateChangedEvent,
 } from 'home-assistant-js-websocket';
-import { globals } from '../globals';
-import { EntityStore } from '../store';
-import { convertHassEntity } from '../types/entity';
-import { DeviceName, deviceNameMap, DeviceTriggers, EntityId } from '../types/schema';
+import { globals } from '@/globals';
+import { EntityStore } from '@/store';
+import { convertHassEntity } from '@/types/entity';
+import { DeviceName, deviceNameMap, DeviceTriggers, EntityId } from '@/types/schema';
 
 export class HassWebsocket {
   private connection?: Connection;
