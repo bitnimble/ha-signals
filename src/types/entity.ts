@@ -1,7 +1,7 @@
 import { HassEntity } from 'home-assistant-js-websocket';
 import { match } from 'ts-pattern';
-import { Signal } from '@/signal';
-import { DomainId, Entities, EntityId } from '@/types/schema';
+import { Signal } from '../signal';
+import { DomainId, Entities, EntityId } from './schema';
 
 export type OnOff = 'on' | 'off';
 

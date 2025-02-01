@@ -2,7 +2,7 @@ import 'dotenv/config';
 import fs from 'fs';
 import { createConnection, createLongLivedTokenAuth } from 'home-assistant-js-websocket';
 import path from 'path';
-import { globals } from '@/globals';
+import { globals } from '../src/globals';
 
 global.WebSocket = require('ws');
 
@@ -41,7 +41,7 @@ async function main() {
   }
 
   const output = new StringBuilder();
-  output.add("import { callService } from '@/api/rest';\n");
+  output.add("import { callService } from '../api/rest';\n");
   const domainIds = await processServices(output);
   await processEntities(output, domainIds);
   await processDevices(output);

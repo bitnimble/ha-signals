@@ -1,7 +1,7 @@
 import { HassEntity } from 'home-assistant-js-websocket';
-import { globals } from '@/globals';
-import { convertHassEntity, RawEntity } from '@/types/entity';
-import { Domain, DomainId, Service } from '@/types/schema';
+import { globals } from '../globals';
+import { convertHassEntity, RawEntity } from '../types/entity';
+import { Domain, DomainId, Service } from '../types/schema';
 
 const API_URL = globals.hassUrl + '/api';
 const headers = {
