@@ -10,7 +10,7 @@ import { convertHassEntity } from '../types/entity';
 import { DeviceName, deviceNameMap, DeviceTriggers, EntityId } from '../types/schema';
 
 export class HassWebsocket {
-  private connection?: Connection;
+  connection?: Connection;
 
   constructor(private readonly store: EntityStore) {}
 
