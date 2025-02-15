@@ -40,7 +40,7 @@ export namespace Signal {
     return mobx.autorun(fn);
   }
 
-  export function transaction<F extends Function>(fn: F): F {
+  export function wrapEffect<F extends Function>(fn: F): F {
     return mobx.action(fn);
   }
 }
