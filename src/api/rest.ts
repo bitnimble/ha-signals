@@ -21,12 +21,15 @@ export async function callService<
   D extends DomainId,
   S extends Domain<D>['services'][number]['id'],
 >(domain: D, service: S, target: Service<D, S>['target'], data?: Service<D, S>['data']) {
-  const resp = await fetch(API_URL + `/services/${domain}/${service}`, {
+  await fetch(API_URL + `/services/${domain}/${service}`, {
     headers,
     method: 'POST',
-    body: JSON.stringify({
-      ['entity_id']: target,
-      ...data,
-    }),
-  }).then((r) => r.json());
+    body:
+      target == null
+        ? JSON.stringify(data)
+        : JSON.stringify({
+            ['entity_id']: target,
+            ...data,
+          }),
+  });
 }
