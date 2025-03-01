@@ -8,6 +8,7 @@ export type HassAutomation = {
   name: string;
   init?: (entityStore: EntityStore, hassWs: HassWebsocket) => void | Promise<void>;
   effect: (entityStore: EntityStore, hassWs: HassWebsocket) => void | Promise<void>;
+  debounceMs?: number;
 };
 
 export class HassAutomations {
@@ -24,7 +25,9 @@ export class HassAutomations {
     await this.hassWs.connect();
     for (const automation of this.automations) {
       automation.init?.(this.entityStore, this.hassWs);
-      Signal.effect(() => automation.effect(this.entityStore, this.hassWs!));
+      Signal.effect(() => automation.effect(this.entityStore, this.hassWs!), {
+        debounceMs: automation.debounceMs,
+      });
       console.log(`Registered ${automation.name}`);
     }
   }

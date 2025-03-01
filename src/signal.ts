@@ -36,8 +36,15 @@ export namespace Signal {
     }
   }
 
-  export function effect(fn: () => void): () => void {
-    return mobx.autorun(fn);
+  export function effect(
+    fn: () => void,
+    options?: {
+      debounceMs?: number;
+    }
+  ): () => void {
+    return mobx.autorun(fn, {
+      delay: options?.debounceMs || 0,
+    });
   }
 
   export function wrapEffect<F extends Function>(fn: F): F {
