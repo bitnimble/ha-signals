@@ -30,9 +30,21 @@ export class HassAutomations {
     await this.hassWs.connect();
     for (const automation of this.automations) {
       automation.init?.(this.hassWs, this.entityStore);
-      Signal.effect(() => automation.effect(this.hassWs!, this.entityStore), {
-        debounceMs: automation.debounceMs,
-      });
+      Signal.effect(
+        () => {
+          try {
+            automation.effect(this.hassWs!, this.entityStore);
+          } catch (e) {
+            console.error(
+              `Automation "${automation.name}" failed with the following error:\n`,
+              JSON.stringify(e, undefined, 2)
+            );
+          }
+        },
+        {
+          debounceMs: automation.debounceMs,
+        }
+      );
       console.log(`Registered ${automation.name}`);
     }
   }
