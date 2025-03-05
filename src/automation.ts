@@ -20,7 +20,7 @@ export class HassAutomations {
     this.entityStore = new EntityStore();
     this.hassWs?.close();
 
-    this.entityStore.reloadStates();
+    await this.entityStore.reloadStates();
     this.hassWs = new HassWebsocket(this.entityStore);
     await this.hassWs.connect();
     for (const automation of this.automations) {
