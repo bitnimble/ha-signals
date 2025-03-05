@@ -6,8 +6,8 @@ global.WebSocket = require('ws');
 
 export type HassAutomation = {
   name: string;
-  init?: (entityStore: EntityStore, hassWs: HassWebsocket) => void | Promise<void>;
-  effect: (entityStore: EntityStore, hassWs: HassWebsocket) => void | Promise<void>;
+  init?: (hassWs: HassWebsocket, entityStore: EntityStore) => void | Promise<void>;
+  effect: (hassWs: HassWebsocket, entityStore: EntityStore) => void | Promise<void>;
   debounceMs?: number;
 };
 
@@ -29,8 +29,8 @@ export class HassAutomations {
     this.hassWs = new HassWebsocket(this.entityStore);
     await this.hassWs.connect();
     for (const automation of this.automations) {
-      automation.init?.(this.entityStore, this.hassWs);
-      Signal.effect(() => automation.effect(this.entityStore, this.hassWs!), {
+      automation.init?.(this.hassWs, this.entityStore);
+      Signal.effect(() => automation.effect(this.hassWs!, this.entityStore), {
         debounceMs: automation.debounceMs,
       });
       console.log(`Registered ${automation.name}`);
