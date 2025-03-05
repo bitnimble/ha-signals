@@ -12,9 +12,14 @@ export type HassAutomation = {
 };
 
 export class HassAutomations {
-  private entityStore = new EntityStore();
+  entityStore = new EntityStore();
   private hassWs?: HassWebsocket;
-  constructor(private readonly automations: HassAutomation[]) {}
+  private automations: HassAutomation[] = [];
+  constructor(initialAutomations?: HassAutomation[]) {
+    if (initialAutomations) {
+      this.automations.push(...initialAutomations);
+    }
+  }
 
   async init() {
     this.entityStore = new EntityStore();
@@ -30,5 +35,9 @@ export class HassAutomations {
       });
       console.log(`Registered ${automation.name}`);
     }
+  }
+
+  addAutomations(...automations: HassAutomation[]) {
+    this.automations.push(...automations);
   }
 }
