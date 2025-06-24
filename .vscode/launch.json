@@ -9,8 +9,8 @@
       "request": "launch",
       "name": "Launch Program",
       "skipFiles": ["<node_internals>/**"],
-      "runtimeExecutable": "tsx",
-      "program": "${workspaceFolder}/src/index.ts"
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["schema"]
     }
   ]
 }

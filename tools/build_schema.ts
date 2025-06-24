@@ -81,7 +81,7 @@ async function processServices(output: StringBuilder) {
           continue;
         }
         targetStr = target.entity
-          .map((e: any) => (e.domain ? `Entities['${e.domain}']` : 'EntityId'))
+          .map((e: any) => (e.domain ? `Entities['${e.domain}']['entityId']` : 'EntityId'))
           .join(' | ');
       } else if (target?.device) {
         // TODO: support "device" targets
@@ -183,7 +183,7 @@ function processFields(fields: Record<string, any>): string[] {
       } else if (selectorType === 'entity') {
         if (selectorMetadata?.domain) {
           // TODO: integration filtering as well (available on selectorMetadata.integration)
-          fieldType = `Entities['${selectorMetadata.domain}']`;
+          fieldType = `Entities['${selectorMetadata.domain}']['entityId']`;
         } else {
           fieldType = 'EntityId';
         }
@@ -220,6 +220,52 @@ ${validTsDocParts.map(([k, v]) => ` * @${k} ${v}`).join('\n')}
     : '';
 }
 
+function inferType(value: any): string {
+  if (value === null || value === undefined) {
+    return 'any';
+  }
+  if (typeof value === 'string') {
+    return 'string';
+  }
+  if (typeof value === 'number') {
+    return 'number';
+  }
+  if (typeof value === 'boolean') {
+    return 'boolean';
+  }
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      return 'any[]';
+    }
+    const itemType = inferType(value[0]);
+    return `${itemType}[]`;
+  }
+  if (typeof value === 'object') {
+    const obj: Record<string, any> = {};
+    for (const [key, val] of Object.entries(value)) {
+      obj[key] = inferType(val);
+    }
+
+    // Stringify into JS representation (not JSON with quoted keys)
+    const stringify = (o: object): string => {
+      return `{
+        ${Object.entries(o)
+          .map(([key, val]) => {
+            const keyToWrite = ['-', '.', ' '].some((c) => key.includes(c)) ? `'${key}'` : key;
+            if (typeof val === 'object') {
+              return `${keyToWrite}: ${stringify(val)}`;
+            }
+            return `${keyToWrite}: ${val}`;
+          })
+          .join(',\n  ')}
+        }`;
+    };
+
+    return stringify(obj);
+  }
+  return 'any';
+}
+
 async function processEntities(output: StringBuilder, domainIds: string[]) {
   const entities = (await fetch(globals.hassUrl + '/api/states', {
     headers: authHeaders,
@@ -233,10 +279,15 @@ async function processEntities(output: StringBuilder, domainIds: string[]) {
   const groupedEntities = entities.reduce((a, c) => {
     const domain = c.entity_id.substring(0, c.entity_id.indexOf('.'));
     const existing = a.get(domain);
+    const entityToWrite = `{
+        entityId: '${c.entity_id}',
+        attributes: ${inferType(c.attributes)},
+        state: ${inferType(c.state)},
+      }`;
     if (existing) {
-      existing.push(c.entity_id);
+      existing.push(entityToWrite);
     } else {
-      a.set(domain, [c.entity_id]);
+      a.set(domain, [entityToWrite]);
     }
     return a;
   }, new Map<string, string[]>());
@@ -247,12 +298,13 @@ async function processEntities(output: StringBuilder, domainIds: string[]) {
   output.add(`
 export type Entities = {
   ${[...groupedEntities.entries()]
-    .map(([domain, entities]) => `['${domain}']: ${entities.map((e) => `'${e}'`).join(' | ')},`)
+    .map(([domain, entities]) => `['${domain}']: ${entities.join(' | ')},`)
     .join('\n')}
   ${[...domainIdsSet].map((d) => `['${d}']: never,`).join('\n')}
 }
 
-export type EntityId = Entities[keyof Entities];
+export type EntityId = Entities[keyof Entities]['entityId'];
+export type Attributes<D extends DomainId, E extends EntityId> = Extract<Entities[D], { entityId: E }>['attributes'];
 `);
 }
 
@@ -311,7 +363,7 @@ type UnionToIntersection<U> = (U extends any ? (x: U) => void : never) extends (
 export type DomainForEntity = UnionToIntersection<
   {
     [Domain in keyof Entities]: {
-      [EntityId in Entities[Domain]]: Domain;
+      [EntityId in Entities[Domain]['entityId']]: Domain;
     };
   }[keyof Entities]
 >;

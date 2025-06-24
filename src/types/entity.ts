@@ -1,7 +1,7 @@
 import { HassEntity } from 'home-assistant-js-websocket';
 import { match } from 'ts-pattern';
 import { Signal } from '../signal';
-import { DomainId, Entities, EntityId } from './schema';
+import { Attributes, DomainId, Entities, EntityId } from './schema';
 
 export type OnOff = 'on' | 'off';
 
@@ -17,14 +17,14 @@ export type EntityState<D extends DomainId> = D extends keyof EntityStates
 
 export type RawEntity<
   D extends DomainId,
-  Id extends Entities[D] = Entities[D],
-  A extends {} = {},
+  Id extends Entities[D]['entityId'] = Entities[D]['entityId'],
+  A extends Attributes<D, Id> = Attributes<D, Id>,
 > = {
   id: Id;
   domain: D;
   state?: EntityState<D>;
   lastChanged: Date;
-  attributes: A;
+  attributes?: A;
 };
 
 export function convertHassEntity(hassEntity: HassEntity): RawEntity<DomainId> {
@@ -40,11 +40,15 @@ export function convertHassEntity(hassEntity: HassEntity): RawEntity<DomainId> {
     domain,
     state,
     lastChanged: new Date(hassEntity.last_updated), // last_updated = state or attribute change, last_changed = state change only
-    attributes: hassEntity.attributes,
+    attributes: hassEntity.attributes as Attributes<DomainId, EntityId>,
   };
 }
 
-export class Entity<D extends DomainId, Id extends Entities[D] = Entities[D], A extends {} = {}> {
+export class Entity<
+  D extends DomainId,
+  Id extends Entities[D]['entityId'] = Entities[D]['entityId'],
+  A extends Attributes<D, Id> = Attributes<D, Id>,
+> {
   readonly id: Id;
   readonly domain: D;
 

@@ -35,10 +35,8 @@ export class HassAutomations {
           try {
             automation.effect(this.hassWs!, this.entityStore);
           } catch (e) {
-            console.error(
-              `Automation "${automation.name}" failed with the following error:\n`,
-              JSON.stringify(e, undefined, 2)
-            );
+            console.error(`Automation "${automation.name}" failed with the following error:\n`);
+            console.error(e);
           }
         },
         {
