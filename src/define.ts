@@ -60,11 +60,13 @@ export class DefinedEntity<
     const domain = this.entityId.substring(0, this.entityId.indexOf('.')) as D;
 
     // Convert boolean to 'on'/'off' for input_boolean
-    let serviceValue: any = value;
     if (domain === 'input_boolean') {
       const service = value ? 'turn_on' : 'turn_off';
       callService('input_boolean' as any, service as any, this.entityId, undefined).catch((err) =>
-        console.error(`Failed to update state for ${this.entityId}:`, err)
+        console.error(
+          `Failed to ${service} for ${this.entityId} (state: ${value}):`,
+          err
+        )
       );
       return;
     }
@@ -114,6 +116,11 @@ export class DefinedEntity<
 const definedEntities = new Map<string, DefinedEntity<any, any, any>>();
 
 /**
+ * Counter for generating unique entity IDs
+ */
+let entityCounter = 0;
+
+/**
  * Helper to generate entity key for tracking
  */
 function getEntityKey(id: string, opts: any): string {
@@ -133,7 +140,8 @@ export const Define = {
     opts: InputBooleanOptions
   ): DefinedEntity<'input_boolean', any, any> {
     // Generate entity ID if not provided
-    const entityId: EntityId = opts.id || `input_boolean.${opts.name?.toLowerCase().replace(/\s+/g, '_') || 'unnamed'}`;
+    const entityId: EntityId = opts.id || 
+      `input_boolean.${opts.name?.toLowerCase().replace(/\s+/g, '_') || `unnamed_${entityCounter++}`}`;
 
     // Check if already defined with same options (idempotent)
     const key = getEntityKey(entityId, opts);

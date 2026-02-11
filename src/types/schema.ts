@@ -110,11 +110,18 @@ export type DeviceName = string;
 export type DeviceTriggers<D extends DeviceName> = string;
 export const deviceNameMap = new Map<string, string>();
 
-// Utility type
+/**
+ * Utility type that converts a union type to an intersection type.
+ * Used to map entity IDs to their domains for type-safe entity access.
+ */
 type UnionToIntersection<U> = (U extends any ? (x: U) => void : never) extends (x: infer I) => void
   ? I
   : never;
 
+/**
+ * Maps entity IDs to their corresponding domain types.
+ * This allows TypeScript to infer the correct domain type from an entity ID.
+ */
 export type DomainForEntity = UnionToIntersection<
   {
     [Domain in keyof Entities]: {

@@ -24,6 +24,7 @@ const mySwitch = Define.inputBoolean(store, {
 });
 
 // Example 2: Get the state (reactive)
+// Note: state is of type EntityState<'input_boolean'> (boolean for input_boolean entities)
 console.log('Current state:', mySwitch.state); // undefined initially, then boolean after HA sync
 
 // Example 3: Set the state (updates Home Assistant)
