@@ -1,4 +1,5 @@
 export * from './automation';
+export * from './define';
 export * from './globals';
 export * from './signal';
 export * from './store';
