@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "HA Signals",
+        "description": "Add the HA Signals integration to enable TypeScript-defined entities."
+      }
+    },
+    "abort": {
+      "already_configured": "HA Signals is already configured."
+    }
+  }
+}
