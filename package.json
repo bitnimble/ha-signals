@@ -4,6 +4,9 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "bin": {
+    "ha-signals-schema": "./tools/build_schema.ts"
+  },
   "repository": "git@github.com:bitnimble/ha-signals.git",
   "author": "D <me@kumo.dev>",
   "license": "MIT",

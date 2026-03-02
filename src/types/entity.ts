@@ -1,34 +1,41 @@
 import { HassEntity } from 'home-assistant-js-websocket';
 import { match } from 'ts-pattern';
 import { Signal } from '../signal';
-import { Attributes, DomainId, Entities, EntityId } from './schema';
+import { Schema } from './base';
 
 export type OnOff = 'on' | 'off';
 
-type EntityStates = {
+type _EntityStates = {
   ['light']: OnOff;
   ['binary_sensor']: OnOff;
   ['input_boolean']: boolean;
   ['sensor']: string;
 };
-export type EntityState<D extends DomainId> = D extends keyof EntityStates
-  ? EntityStates[D]
+export type EntityState<S extends Schema, D extends S['DomainId']> = D extends keyof _EntityStates
+  ? _EntityStates[D]
   : string;
+export type EntityStates = _EntityStates[keyof _EntityStates];
 
 export type RawEntity<
-  D extends DomainId,
-  Id extends Entities[D]['entityId'] = Entities[D]['entityId'],
-  A extends Attributes<D, Id> = Attributes<D, Id>,
+  S extends Schema,
+  D extends S['DomainId'] = S['DomainId'],
+  Id extends S['Entities'][D]['entityId'] = S['Entities'][D]['entityId'],
+  A extends S['Attributes'][D][Id] = S['Attributes'][D][Id],
 > = {
   id: Id;
   domain: D;
-  state?: EntityState<D>;
+  state?: EntityState<S, D>;
   lastChanged: Date;
   attributes?: A;
 };
 
-export function convertHassEntity(hassEntity: HassEntity): RawEntity<DomainId> {
-  const domain = hassEntity.entity_id.substring(0, hassEntity.entity_id.indexOf('.')) as DomainId;
+export function convertHassEntity<
+  S extends Schema,
+  Id extends S['EntityId'] = S['EntityId'],
+  D extends S['DomainForEntity'][S['EntityId']] = S['DomainForEntity'][Id],
+  A extends S['Attributes'][D][Id] = S['Attributes'][D][Id],
+>(hassEntity: HassEntity): RawEntity<S> {
+  const domain = hassEntity.entity_id.substring(0, hassEntity.entity_id.indexOf('.'));
   const state =
     hassEntity.state === 'unavailable' || hassEntity.state === 'unknown'
       ? undefined
@@ -36,36 +43,38 @@ export function convertHassEntity(hassEntity: HassEntity): RawEntity<DomainId> {
           .with('input_boolean', () => (hassEntity.state === 'on' ? true : false))
           .otherwise(() => hassEntity.state);
   return {
-    id: hassEntity.entity_id as EntityId,
-    domain,
-    state,
+    id: hassEntity.entity_id as Id,
+    domain: domain as D,
+    state: state as EntityState<S, D>,
     lastChanged: new Date(hassEntity.last_updated), // last_updated = state or attribute change, last_changed = state change only
-    attributes: hassEntity.attributes as Attributes<DomainId, EntityId>,
+    attributes: hassEntity.attributes as A,
   };
 }
 
 export class Entity<
-  D extends DomainId,
-  Id extends Entities[D]['entityId'] = Entities[D]['entityId'],
-  A extends Attributes<D, Id> = Attributes<D, Id>,
+  S extends Schema,
+  D extends S['DomainId'] = S['DomainId'],
+  Id extends S['Entities'][D]['entityId'] = S['Entities'][D]['entityId'],
+  A extends S['Attributes'][D][Id] = S['Attributes'][D][Id],
+  R extends RawEntity<S, D, Id, A> = RawEntity<S, D, Id, A>,
 > {
   readonly id: Id;
   readonly domain: D;
 
-  private entity: Signal.State<RawEntity<D, Id, A>>;
-  private rawEntity: RawEntity<D, Id, A>;
+  private entity: Signal.State<R>;
+  private rawEntity: R;
   private computedState = new Signal.Computed(() => this.entity.get().state);
   private computedAttributes = new Signal.Computed(() => this.entity.get().attributes);
   private computedLastChanged = new Signal.Computed(() => this.entity.get().lastChanged);
 
-  constructor(initialState: RawEntity<D, Id, A>) {
+  constructor(initialState: R) {
     this.entity = new Signal.State(initialState);
     this.rawEntity = initialState;
     this.domain = initialState.domain;
     this.id = initialState.id;
   }
 
-  set(e: RawEntity<D, Id, A>) {
+  set(e: R) {
     this.entity.set(e);
     this.rawEntity = e;
   }

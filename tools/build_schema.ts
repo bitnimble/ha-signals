@@ -1,3 +1,4 @@
+#!/usr/bin/env -S npx tsx
 import 'dotenv/config';
 import fs from 'fs';
 import { createConnection, createLongLivedTokenAuth } from 'home-assistant-js-websocket';
@@ -5,6 +6,16 @@ import path from 'path';
 import { globals } from '../src/globals';
 
 global.WebSocket = require('ws');
+
+// Resolve the output path from the caller's working directory, not this package's location.
+// Accepts an optional --output <path> argument; defaults to src/types/schema.ts.
+function resolveOutputPath(): string {
+  const args = process.argv.slice(2);
+  const outputIdx = args.indexOf('--output');
+  const relPath =
+    outputIdx !== -1 && args[outputIdx + 1] ? args[outputIdx + 1] : 'src/types/schema.ts';
+  return path.resolve(process.cwd(), relPath);
+}
 
 const camelcase = (s: string, uppercase: boolean = false) => {
   const parts = s.split('_');
@@ -41,13 +52,18 @@ async function main() {
   }
 
   const output = new StringBuilder();
-  output.add("import { callService } from '../api/rest';\n");
+  output.add("import { callService } from 'ha-signals';\n");
   const domainIds = await processServices(output);
   await processEntities(output, domainIds);
   await processDevices(output);
 
-  const outputPath = path.join(__dirname, '..', 'src/types/schema.ts');
+  const outputPath = resolveOutputPath();
+  const outputDir = path.dirname(outputPath);
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir, { recursive: true });
+  }
   fs.writeFileSync(outputPath, output.build());
+  console.log(`Schema written to ${outputPath}`);
 }
 
 async function processServices(output: StringBuilder) {
@@ -304,7 +320,11 @@ export type Entities = {
 }
 
 export type EntityId = Entities[keyof Entities]['entityId'];
-export type Attributes<D extends DomainId, E extends EntityId> = Extract<Entities[D], { entityId: E }>['attributes'];
+export type Attributes = {
+  [D in DomainId]: {
+    [E in Entities[D]['entityId']]: Extract<Entities[D], { entityId: E }>['attributes'];
+  };
+};
 `);
 }
 
@@ -367,6 +387,13 @@ export type DomainForEntity = UnionToIntersection<
     };
   }[keyof Entities]
 >;
+export type Schema = {
+  DomainId: DomainId,
+  EntityId: EntityId,
+  Entities: Entities,
+  DomainForEntity: DomainForEntity,
+  Attributes: Attributes,
+};
 `);
 
   connection.close();

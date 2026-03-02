@@ -1,7 +1,7 @@
 import { HassEntity } from 'home-assistant-js-websocket';
 import { globals } from '../globals';
+import { Schema } from '../types/base';
 import { convertHassEntity, RawEntity } from '../types/entity';
-import { Domain, DomainId, Service } from '../types/schema';
 
 const API_URL = globals.hassUrl + '/api';
 const headers = {
@@ -9,18 +9,20 @@ const headers = {
   'Content-Type': 'application/json',
 };
 
-export async function getStates(): Promise<RawEntity<DomainId>[]> {
+export async function getStates<S extends Schema>(): Promise<RawEntity<S>[]> {
   const resp = (await fetch(API_URL + '/states', {
     headers,
   }).then((r) => r.json())) as HassEntity[];
 
-  return resp.map(convertHassEntity);
+  return resp.map(convertHassEntity<S>);
 }
 
-export async function callService<
-  D extends DomainId,
-  S extends Domain<D>['services'][number]['id'],
->(domain: D, service: S, target: Service<D, S>['target'], data?: Service<D, S>['data']) {
+export async function callService(
+  domain: string,
+  service: string,
+  target: string | string[] | null,
+  data?: object
+) {
   await fetch(API_URL + `/services/${domain}/${service}`, {
     headers,
     method: 'POST',

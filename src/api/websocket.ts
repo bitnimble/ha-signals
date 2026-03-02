@@ -4,15 +4,23 @@ import {
   createLongLivedTokenAuth,
   StateChangedEvent,
 } from 'home-assistant-js-websocket';
+import { EntityDefinition } from '../define';
 import { globals } from '../globals';
 import { EntityStore } from '../store';
+import { Schema } from '../types/base';
 import { convertHassEntity } from '../types/entity';
-import { DeviceName, deviceNameMap, DeviceTriggers, EntityId } from '../types/schema';
 
-export class HassWebsocket {
+export type RegisterEntitiesResult = {
+  entities: Record<string, string | null>;
+};
+
+export class HassWebsocket<S extends Schema> {
   connection?: Connection;
 
-  constructor(private readonly store: EntityStore) {}
+  constructor(
+    private readonly store: EntityStore<S>,
+    private readonly deviceNameMap: Map<string, string>
+  ) {}
 
   async connect() {
     const auth = createLongLivedTokenAuth(globals.hassUrl, globals.authToken);
@@ -29,7 +37,7 @@ export class HassWebsocket {
       throw new Error('Websocket connection was not alive');
     }
     this.connection.subscribeEvents<StateChangedEvent>((e) => {
-      const entityId = e.data.entity_id as EntityId;
+      const entityId = e.data.entity_id as S['EntityId'];
       if (!e.data.new_state) {
         this.store.deleteState(entityId);
         return;
@@ -38,15 +46,15 @@ export class HassWebsocket {
     }, 'state_changed');
   }
 
-  createTrigger<D extends DeviceName, F extends () => void | Promise<void>>(
+  createTrigger<D extends string, T extends string, F extends () => void | Promise<void>>(
     device: D,
-    trigger: DeviceTriggers<D>,
+    trigger: T,
     fn: F
   ) {
     if (!this.connection) {
       throw new Error('Websocket connection was not alive');
     }
-    const deviceId = deviceNameMap.get(device);
+    const deviceId = this.deviceNameMap.get(device);
     if (!deviceId) {
       throw new Error('Unknown device name' + device);
     }
@@ -67,6 +75,47 @@ export class HassWebsocket {
         },
       }
     );
+  }
+
+  async registerEntities(definitions: EntityDefinition[]): Promise<RegisterEntitiesResult> {
+    if (!this.connection) {
+      throw new Error('Websocket connection was not alive');
+    }
+    return this.connection.sendMessagePromise<RegisterEntitiesResult>({
+      type: 'ha_signals/register',
+      entities: definitions.map((d) => ({
+        type: d.type,
+        id: d.id,
+        name: d.name,
+        icon: d.icon,
+        config: d.config,
+      })),
+    });
+  }
+
+  async pushEntityState(
+    id: string,
+    state: unknown,
+    attributes?: Record<string, unknown>
+  ): Promise<void> {
+    if (!this.connection) {
+      throw new Error('Websocket connection was not alive');
+    }
+    await this.connection.sendMessagePromise({
+      type: 'ha_signals/state',
+      entity_id: id,
+      state,
+      attributes,
+    });
+  }
+
+  async getRegisteredEntities(): Promise<{ entities: EntityDefinition[] }> {
+    if (!this.connection) {
+      throw new Error('Websocket connection was not alive');
+    }
+    return this.connection.sendMessagePromise({
+      type: 'ha_signals/get_registered',
+    });
   }
 
   close() {
